@@ -1,0 +1,56 @@
+
+version: '3.6'
+services:
+
+   prometheus1:
+      image:    prom/prometheus:v2.13.1
+      container_name: prometheus1
+      ports:
+         - 9091:9090
+      volumes:
+         - ./demo1-config.yml:/etc/prometheus/prometheus.yml
+
+   prometheus2:
+      image:    prom/prometheus:v2.13.1
+      container_name: prometheus2
+      ports:
+         - 9092:9090
+      volumes:
+         - ./demo2-config.yml:/etc/prometheus/prometheus.yml
+         
+   cadvisor:
+      image: google/cadvisor:latest
+      container_name: cadvisor
+      ports:
+         - 8080:8080
+      volumes:
+         - /:/rootfs:ro
+         - /var/run:/var/run:rw
+         - /sys:/sys:ro
+         - /var/lib/docker/:/var/lib/docker:ro
+
+   grafana:
+      image: grafana/grafana
+      container_name: grafana
+      environment:
+         - GF_AUTH_ANONYMOUS_ENABLED=true
+         - GF_AUTH_DISABLE_LOGIN_FORM=true
+         - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      ports:
+         - 3000:3000
+   
+   webapp:
+      build: .
+      command: flask run --host=0.0.0.0
+      working_dir: /app
+      environment:
+         - FLASK_APP=container_exporter
+         - CONTAINER_NAME=cadvisor
+         - PROMETHEUS_HOST="prometheus2"
+      ports:
+         - 5000:5000
+         - 8000:8000
+         - 9100:9100
+      volumes:
+         - .:/app
+
